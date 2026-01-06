@@ -183,17 +183,45 @@ M.get_mode_from_stat = function(filepath)
   filepath = vim.fs.normalize(filepath)
   local stat = vim.uv.fs_stat(filepath)
   if not stat then return end
-  if stat.type == 'file' then
-    local mode = stat.mode
-    if cache.mode_map.set_uid and mode % 0x1000 >= 0x800 then
-      return 'set_uid'
-    elseif cache.mode_map.set_gid and mode % 0x800 >= 0x400 then
-      return 'set_gid'
-    elseif cache.mode_map.executable and mode % 0x40 >= 0x1 then
-      return 'executable'
-    elseif cache.mode_map.multi_hardlink and stat.nlink > 1 then
-      return 'multi_hardlink'
+  if stat.type == 'directory' then
+    if cache.mode_map.sticky_other_writable then
+      local mode = stat.mode
+      if bit.band(mode, 0x1002) == 0x1002 then return 'sticky_other_writable' end
     end
+    if cache.mode_map.other_writable then
+      local mode = stat.mode
+      if bit.band(mode, 0x0002) ~= 0 then return 'other_writable' end
+    end
+    if cache.mode_map.sticky then
+      local mode = stat.mode
+      if bit.band(mode, 0x1000) ~= 0 then return 'sticky' end
+    end
+    return 'directory'
+  elseif stat.type == 'file' then
+    if cache.mode_map.set_uid then
+      local mode = stat.mode
+      if bit.band(mode, 0x800) ~= 0 then return 'set_uid' end
+    end
+    if cache.mode_map.set_gid then
+      local mode = stat.mode
+      if bit.band(mode, 0x400) ~= 0 then return 'set_gid' end
+    end
+    if cache.mode_map.executable then
+      local mode = stat.mode
+      if bit.band(mode, 0x49) ~= 0 then return 'executable' end
+    end
+    if cache.mode_map.multi_hardlink and stat.nlink > 1 then return 'multi_hardlink' end
+    return 'file'
+  elseif stat.type == 'link' then
+    return 'link'
+  elseif stat.type == 'fifo' then
+    return 'pipe'
+  elseif stat.type == 'socket' then
+    return 'socket'
+  elseif stat.type == 'char' then
+    return 'char_device'
+  elseif stat.type == 'block' then
+    return 'block_device'
   end
 end
 

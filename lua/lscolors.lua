@@ -179,8 +179,10 @@ end
 ---@param overrides table<string, string> map of keys to highlight groups
 M.set_overrides = function(overrides) cache.overrides = overrides or {} end
 
-M.get_mode_from_stat = function(filepath)
-  local stat = vim.uv.fs_stat(filepath)
+---@param filepath string
+---@param stat uv.fs_stat.result?
+M.get_mode_from_stat = function(filepath, stat)
+  stat = stat or vim.uv.fs_stat(filepath)
   if not stat then return end
 
   if stat.type == 'directory' then

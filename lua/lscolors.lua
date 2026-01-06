@@ -142,7 +142,7 @@ end
 M.parse = function(force)
   if cache.parsed and not force then return end
 
-  local ls_colors = vim.env.LS_COLORS
+  local ls_colors = os.getenv('LS_COLORS')
   if not ls_colors or ls_colors == '' then
     cache.parsed = true
     return
@@ -163,8 +163,8 @@ M.parse = function(force)
         cache.mode_map[mode_name] = create_hlgroup(mode_name, opts)
         cache.needs_metadata = key == 'ex' or key == 'su' or key == 'sg' or key == 'mh'
       elseif key:match('^%*%.') then
-        local ext = key:sub(2)
-        cache.ext_map[ext] = create_hlgroup('ext' .. ext:gsub('%.', '_'), opts)
+        local ext = key:sub(3)
+        cache.ext_map[ext] = create_hlgroup('ext_' .. ext:gsub('%.', '_'), opts)
       elseif key ~= 'rs' and key ~= 'lc' and key ~= 'rc' and key ~= 'ec' then
         cache.glob_map[#cache.glob_map + 1] =
           { key, vim.regex(vim.fn.glob2regpat(key)), create_hlgroup('glob_' .. key, opts) }
@@ -241,8 +241,16 @@ M.get_hl = function(filename, mode)
     if regex:match_str(filename) then return cache.overrides[pattern] or hl end
   end
 
-  for ext, hl in pairs(cache.ext_map) do
-    if filename:sub(-#ext) == ext then return hl end
+  local parts = vim.split(vim.fs.basename(filename), '%.')
+  local ext = parts[#parts]
+  local hl = cache.ext_map[ext]
+  if hl then return hl end
+  if #parts > 2 then
+    for i = #parts - 1, 1 do
+      ext = parts[i] .. '.' .. ext
+      local hl0 = cache.ext_map[ext]
+      if hl0 then return hl0 end
+    end
   end
 
   return cache.default_hl

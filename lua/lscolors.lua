@@ -180,9 +180,9 @@ end
 M.set_overrides = function(overrides) cache.overrides = overrides or {} end
 
 M.get_mode_from_stat = function(filepath)
-  filepath = vim.fs.normalize(filepath)
   local stat = vim.uv.fs_stat(filepath)
   if not stat then return end
+
   if stat.type == 'directory' then
     if cache.mode_map.sticky_other_writable then
       local mode = stat.mode
@@ -234,13 +234,13 @@ M.get_hl = function(filename, mode)
   mode = mode or M.get_mode_from_stat(filename)
   if mode and cache.mode_map[mode] then return cache.mode_map[mode] end
 
-  for ext, hl in pairs(cache.ext_map) do
-    if filename:sub(-#ext) == ext then return hl end
-  end
-
   for _, ctx in ipairs(cache.glob_map) do
     local pattern, regex, hl = unpack(ctx)
     if regex:match_str(filename) then return cache.overrides[pattern] or hl end
+  end
+
+  for ext, hl in pairs(cache.ext_map) do
+    if filename:sub(-#ext) == ext then return hl end
   end
 
   return cache.default_hl
